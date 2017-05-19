@@ -180,11 +180,14 @@ static int get_optional_header(unsigned char header, unsigned char *buf, int len
 	if (len < 1)
 		return -1;
 
-	offset += optional_pointer;
-	len -= optional_pointer;
+	if(message->type != ISUP_CPG)
+	  {
+	    offset += optional_pointer;
+	    len -= optional_pointer;
 
-	if (len < 1 )
-		return -1;
+	    if (len < 1 )
+	      return -1;
+	  }	
 
 	/* Optional paramter parsing code */
 	if (optional_pointer) {
@@ -520,3 +523,15 @@ int isup_update_calling(struct sdp_mangler * mangle, char * origin, int nai, int
 
 	return offset;
 }
+
+int isup_get_call_diversion(unsigned char *buf, int len)
+{
+  int offset = get_optional_header(ISUP_PARM_DIVERSION_INFORMATION, buf, len);
+
+  // ERROR CONTROL
+  if(offset != -1 && len-offset-2 > 0)
+    {
+      return buf[offset+2];
+    }
+  return -1;
+}  

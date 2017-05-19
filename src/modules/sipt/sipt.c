@@ -50,6 +50,7 @@ static int sipt_get_presentation(struct sip_msg *msg, pv_param_t *param, pv_valu
 static int sipt_get_screening(struct sip_msg *msg, pv_param_t *param, pv_value_t *res);
 static int sipt_get_called_party_nai(struct sip_msg *msg, pv_param_t *param, pv_value_t *res);
 static int sipt_get_charge_indicator(struct sip_msg *msg, pv_param_t *param, pv_value_t *res);
+static int sipt_get_call_diversion(struct sip_msg *msg, pv_param_t *param, pv_value_t *res);
 
 /* New API */
 int sipt_parse_pv_name(pv_spec_p sp, str *in);
@@ -97,6 +98,8 @@ static sipt_header_map_t sipt_header_mapping[] =
 		{{"CHARGE_INDICATOR", 1}, 
 			{NULL, 0}
 		}},
+	{"CALL_DIVERSION_INFORMATION", ISUP_PARM_DIVERSION_INFORMATION,
+	        {{NULL, 0}} },
 	{ NULL, 0, {}}
 };
 
@@ -171,6 +174,8 @@ static pv_export_t mod_items[] = {
                 0, 0, 0, 0 },
         { {"sipt_called_party_nai",  sizeof("sipt_called_party_nai")-1}, PVT_OTHER,  sipt_get_called_party_nai,    0,
                 0, 0, 0, 0 },
+	{ {"sipt_call_diversion",  sizeof("sipt_call_diversion")-1}, PVT_OTHER,  sipt_get_call_diversion,    0,
+	        0, 0, 0, 0 },
         { {"sipt",  sizeof("sipt")-1}, PVT_OTHER,  sipt_get_pv,    0,
                 sipt_parse_pv_name, 0, 0, 0 },
 	{ {0, 0}, 0, 0, 0, 0, 0, 0, 0 }
@@ -273,6 +278,24 @@ static int sipt_get_calling_party_nai(struct sip_msg *msg, pv_param_t *param, pv
 	
 	pv_get_sintval(msg, param, res, isup_get_calling_party_nai((unsigned char*)body.s, body.len));
 	return 0;
+}
+
+static int sipt_get_call_diversion(struct sip_msg *msg, pv_param_t *param, pv_value_t *res)
+{
+  str body;
+  body.s = get_body_part(msg, TYPE_APPLICATION,SUBTYPE_ISUP,&body.len);
+
+  if(body.s == NULL)
+    {
+      LM_INFO("No ISUP Message Found");
+      return -1;
+    }
+
+  pv_get_sintval(msg, param, res, isup_get_call_diversion((unsigned char*)body.s, body.len));
+
+  LM_INFO("[TESTING] Returned by isup_get_call_diversion: D'%d\n", isup_get_call_diversion((unsigned char*)body.s, body.len));
+
+  return 0;
 }
 
 static int sipt_get_presentation(struct sip_msg *msg, pv_param_t *param, pv_value_t *res)
@@ -507,6 +530,9 @@ static int sipt_get_pv(struct sip_msg *msg, pv_param_t *param, pv_value_t *res)
 				return sipt_get_charge_indicator(msg, param, res);
 			}
 			break;
+	        case ISUP_PARM_DIVERSION_INFORMATION:
+		  return sipt_get_call_diversion(msg, param, res);
+	  
 	}
 
 	return -1;
